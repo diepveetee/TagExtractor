@@ -72,14 +72,66 @@ public class MainGUI extends JFrame {
         }
     }
 
-    private void loadStopWordsFile{
-
+    private void loadStopWordsFile() {
+        JFileChooser chooser = new JFileChooser();
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            Path stopPath = chooser.getSelectedFile().toPath();
+            stopWords.clear();
+            try {
+                List<String> lines = Files.readAllLines(stopPath);
+                for (String line : lines) {
+                    String word = line.trim().toLowerCase();
+                    if (!word.isEmpty()) {
+                        stopWords.add(word);
+                    }
+                }
+                JOptionPane.showMessageDialog(this, "Loaded " + stopWords.size() + " stop words.");
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(this, "Error reading stop words: " + ex.getMessage());
+            }
+        }
     }
 
-    private void runExtraction{
+    private void runExtraction() {
+        if (textFilePath == null) {
+            JOptionPane.showMessageDialog(this, "Please load a text file first.");
+            return;
+        }
+        if (stopWords.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Please load a stop words file first.");
+            return;
+        }
 
+        tagCounts.clear();
+
+        try {
+            List<String> lines = Files.readAllLines(textFilePath);
+            for (String line : lines) {
+                String[] tokens = line.split("\\s+");
+                for (String token : tokens) {
+                    String word = token.replaceAll("[^a-zA-Z]", "").toLowerCase();
+                    if (word.isEmpty()) continue;
+                    if (stopWords.contains(word)) continue;
+
+                    tagCounts.merge(word, 1, Integer::sum);
+                }
+            }
+
+            // Build output
+            StringBuilder sb = new StringBuilder();
+            for (Map.Entry<String, Integer> entry : tagCounts.entrySet()) {
+                sb.append(entry.getKey())
+                        .append(" : ")
+                        .append(entry.getValue())
+                        .append("\n");
+            }
+            outputArea.setText(sb.toString());
+
+        } catch (IOException ex) {
+            JOptionPane.showMessageDialog(this, "Error reading text file: " + ex.getMessage());
+        }
     }
-
 
     private void saveResults() {
         if (tagCounts.isEmpty()) {
